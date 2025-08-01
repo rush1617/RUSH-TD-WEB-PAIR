@@ -4,7 +4,7 @@
     "description": "A multi functional whatsapp bot Web paircode.",
     "main": "index.js",
     "scripts": {
-      "start": "pm2 start index.js --deep-monitoring --attach --name DANUWA-MD",
+      "start": "pm2 start index.js --deep-monitoring --attach --name RUSH-TD",
       "stop": "pm2 stop RUSH-MD",
      "restart": "pm2 restart RUSH-MD"
     },
