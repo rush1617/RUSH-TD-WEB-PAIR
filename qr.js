@@ -144,6 +144,19 @@ router.get("/", async (req, res) => {
                             );
                             if (userJid) {
                                 await KnightBot.sendMessage(userJid, {
+                                image: {url: "https://github.com/rush1617/RUSH-TD/blob/main/images/Alive.png?raw=true"},
+                                caption:
+                                       `╔════◉🟢 𝗥𝗨𝗦𝗛-𝗧𝗗 ◉════╗
+                                        ║  𝙷𝚎𝚢 𝙳𝚞𝚍𝚎,                                    ║
+                                        ║  𝚈𝚘𝚞𝚛 𝚂𝚎𝚜𝚜𝚒𝚘𝚗 𝙸𝚍 𝙷𝚎𝚛𝚎💬    ║
+                                        ╚═══════════════════╝
+                                        ┌──────── ⋆⋅☆⋅⋆ ────────┐
+                                        🚀 Powered By
+                                        RAMESH DISSANAYAKA 🔥
+                                        └──────── ⋆⋅☆⋅⋆ ────────┘`,
+                            });
+                                
+                                await KnightBot.sendMessage(userJid, {
                                     text: `${megaFileId}`,
                                 });
                                 console.log(
