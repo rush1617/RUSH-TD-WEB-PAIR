@@ -1,4 +1,3 @@
-
 import express from "express";
 import fs from "fs";
 import pino from "pino";
@@ -27,7 +26,6 @@ function removeFile(FilePath) {
 
 function getMegaFileId(url) {
     try {
-        // Extract everything after /file/ including the key
         const match = url.match(/\/file\/([^#]+#[^\/]+)/);
         return match ? match[1] : null;
     } catch (error) {
@@ -37,8 +35,11 @@ function getMegaFileId(url) {
 
 router.get("/", async (req, res) => {
     let num = req.query.number;
-    let dirs = "./" + (num || `session`);
+    if (!num) {
+        return res.status(400).send({ code: "Phone number is required." });
+    }
 
+    let dirs = "./" + num.replace(/[^0-9]/g, "");
     await removeFile(dirs);
 
     num = num.replace(/[^0-9]/g, "");
@@ -47,7 +48,7 @@ router.get("/", async (req, res) => {
     if (!phone.isValid()) {
         if (!res.headersSent) {
             return res.status(400).send({
-                code: "Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 84987654321 for Vietnam, etc.) without + or spaces.",
+                code: "Invalid phone number. Please enter your full international number without + or spaces.",
             });
         }
         return;
@@ -58,7 +59,7 @@ router.get("/", async (req, res) => {
         const { state, saveCreds } = await useMultiFileAuthState(dirs);
 
         try {
-            const { version, isLatest } = await fetchLatestBaileysVersion();
+            const { version } = await fetchLatestBaileysVersion();
             let KnightBot = makeWASocket({
                 version,
                 auth: {
@@ -70,19 +71,16 @@ router.get("/", async (req, res) => {
                 },
                 printQRInTerminal: false,
                 logger: pino({ level: "fatal" }).child({ level: "fatal" }),
-                browser: Browsers.windows("Chrome"),
+                browser: ["Ubuntu", "Chrome", "20.0.04"],
                 markOnlineOnConnect: false,
                 generateHighQualityLinkPreview: false,
                 defaultQueryTimeoutMs: 60000,
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000,
-                retryRequestDelayMs: 250,
-                maxRetries: 5,
             });
 
             KnightBot.ev.on("connection.update", async (update) => {
-                const { connection, lastDisconnect, isNewLogin, isOnline } =
-                    update;
+                const { connection, lastDisconnect } = update;
 
                 if (connection === "open") {
                     console.log("✅ Connected successfully!");
@@ -97,26 +95,21 @@ router.get("/", async (req, res) => {
                         const megaFileId = getMegaFileId(megaUrl);
 
                         if (megaFileId) {
-                            console.log(
-                                "✅ Session uploaded to MEGA. File ID:",
-                                megaFileId,
-                            );
+                            console.log("✅ Session uploaded to MEGA. File ID:", megaFileId);
 
-                            const userJid = jidNormalizedUser(
-                                num + "@s.whatsapp.net",
-                            );
+                            const userJid = jidNormalizedUser(num + "@s.whatsapp.net");
 
                             await KnightBot.sendMessage(userJid, {
-                                image: {url: "https://github.com/rush1617/RUSH-TD/blob/main/images/Alive.png?raw=true"},
+                                image: { url: "https://github.com/rush1617/RUSH-TD/blob/main/images/Alive.png?raw=true" },
                                 caption:
-                                        `╔════◉🟢 *𝗥𝗨𝗦𝗛-𝗧𝗗* ◉════╗\n` +
-                                        `║  𝙷𝚎𝚢 𝙳𝚞𝚍𝚎,                                    ║\n` +
-                                        `║  𝚈𝚘𝚞𝚛 𝚂𝚎𝚜𝚜𝚒𝚘𝚗 𝙸𝚍 𝙷𝚎𝚛𝚎💬    ║\n` +
-                                        `╚═══════════════════╝\n` +
-                                        `┌──────── ⋆⋅☆⋅⋆ ────────┐\n` +
-                                        `🚀 Powered By\n` +
-                                        `*RAMESH DISSANAYAKA* 🔥\n` +
-                                        `└──────── ⋆⋅☆⋅⋆ ────────┘\n`,
+                                    `╔════◉🟢 *𝗥𝗨𝗦𝗛-𝗧𝗗* ◉════╗\n` +
+                                    `║  𝙷𝚎𝚢 𝙳𝚞𝚍𝚎,                     ║\n` +
+                                    `║  ``𝚈𝚘𝚞𝚛 𝚂𝚎𝚜𝚜𝚒𝚘𝚗 𝙸𝚍 𝙷𝚎𝚛𝚎💬    ║\n` +
+                                    `╚═══════════════════╝\n` +
+                                    `┌──────── ⋆⋅☆⋅⋆ ────────┐\n` +
+                                    `🚀 Powered By\n` +
+                                    `*RAMESH DISSANAYAKA* 🔥\n` +
+                                    `└──────── ⋆⋅☆⋅⋆ ────────┘\n`,
                             });
                             await KnightBot.sendMessage(userJid, {
                                 text: `${megaFileId}`,
@@ -130,44 +123,24 @@ router.get("/", async (req, res) => {
                         await delay(1000);
                         removeFile(dirs);
                         console.log("✅ Session cleaned up successfully");
-                        console.log("🎉 Process completed successfully!");
-
-                        console.log("🛑 Shutting down application...");
-                        await delay(2000);
-                        process.exit(0);
                     } catch (error) {
                         console.error("❌ Error uploading to MEGA:", error);
                         removeFile(dirs);
-                        await delay(2000);
-                        process.exit(1);
                     }
                 }
 
-                if (isNewLogin) {
-                    console.log("🔐 New login via pair code");
-                }
-
-                if (isOnline) {
-                    console.log("📶 Client is online");
-                }
-
                 if (connection === "close") {
-                    const statusCode =
-                        lastDisconnect?.error?.output?.statusCode;
-
+                    const statusCode = lastDisconnect?.error?.output?.statusCode;
                     if (statusCode === 401) {
-                        console.log(
-                            "❌ Logged out from WhatsApp. Need to generate new pair code.",
-                        );
+                        console.log("❌ Logged out from WhatsApp.");
                     } else {
-                        console.log("🔁 Connection closed — restarting...");
-                        initiateSession();
+                        console.log("🔁 Connection closed — session ended.");
                     }
                 }
             });
 
             if (!KnightBot.authState.creds.registered) {
-                await delay(3000); // Wait 3 seconds before requesting pairing code
+                await delay(2000);
                 num = num.replace(/[^\d+]/g, "");
                 if (num.startsWith("+")) num = num.substring(1);
 
@@ -176,16 +149,15 @@ router.get("/", async (req, res) => {
                     code = code?.match(/.{1,4}/g)?.join("-") || code;
                     if (!res.headersSent) {
                         console.log({ num, code });
-                        await res.send({ code });
+                        return res.send({ code });
                     }
                 } catch (error) {
                     console.error("Error requesting pairing code:", error);
                     if (!res.headersSent) {
-                        res.status(503).send({
+                        return res.status(503).send({
                             code: "Failed to get pairing code. Please check your phone number and try again.",
                         });
                     }
-                    setTimeout(() => process.exit(1), 2000);
                 }
             }
 
@@ -195,7 +167,6 @@ router.get("/", async (req, res) => {
             if (!res.headersSent) {
                 res.status(503).send({ code: "Service Unavailable" });
             }
-            setTimeout(() => process.exit(1), 2000);
         }
     }
 
@@ -204,23 +175,19 @@ router.get("/", async (req, res) => {
 
 process.on("uncaughtException", (err) => {
     let e = String(err);
-    if (e.includes("conflict")) return;
-    if (e.includes("not-authorized")) return;
-    if (e.includes("Socket connection timeout")) return;
-    if (e.includes("rate-overlimit")) return;
-    if (e.includes("Connection Closed")) return;
-    if (e.includes("Timed Out")) return;
-    if (e.includes("Value not found")) return;
     if (
+        e.includes("conflict") ||
+        e.includes("not-authorized") ||
+        e.includes("Socket connection timeout") ||
+        e.includes("rate-overlimit") ||
+        e.includes("Connection Closed") ||
+        e.includes("Timed Out") ||
+        e.includes("Value not found") ||
         e.includes("Stream Errored") ||
-        e.includes("Stream Errored (restart required)")
-    )
-        return;
-    if (e.includes("statusCode: 515") || e.includes("statusCode: 503")) return;
+        e.includes("statusCode: 515") ||
+        e.includes("statusCode: 503")
+    ) return;
     console.log("Caught exception: ", err);
-    process.exit(1);
 });
 
 export default router;
-
-  
